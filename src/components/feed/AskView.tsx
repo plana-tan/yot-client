@@ -185,6 +185,41 @@ export default function AskView({ events, timeFormat, onOpenEvent }: AskViewProp
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       testID="feed-ask"
     >
+      {availableModels.length > 1 ? (
+        <View style={styles.modelHeader}>
+          <TouchableOpacity
+            style={styles.modelChip}
+            onPress={() => setModelPickerOpen((open) => !open)}
+            testID="ask-model-picker"
+            accessibilityRole="button"
+            accessibilityLabel={`Model: ${selectedModel || 'Select model'}`}
+          >
+            <Text style={styles.modelChipText} numberOfLines={1}>
+              {selectedModel || 'Select model'}
+            </Text>
+            <Text style={styles.modelChipChevron}>{modelPickerOpen ? '⌃' : '⌄'}</Text>
+          </TouchableOpacity>
+          {modelPickerOpen ? (
+            <View style={styles.modelDropdown}>
+              {availableModels.map((model) => (
+                <TouchableOpacity
+                  key={model}
+                  style={[styles.modelOption, model === selectedModel && styles.modelOptionSelected]}
+                  onPress={() => {
+                    setSelectedModel(model);
+                    setModelPickerOpen(false);
+                  }}
+                  testID={`ask-model-option-${model}`}
+                >
+                  <Text style={styles.modelOptionText}>{model}</Text>
+                  {model === selectedModel ? <Text style={styles.modelCheck}>✓</Text> : null}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, idle && styles.scrollContentIdle]}
@@ -267,43 +302,6 @@ export default function AskView({ events, timeFormat, onOpenEvent }: AskViewProp
           </View>
         ) : null}
       </ScrollView>
-
-      {availableModels.length > 1 && (
-        <View style={styles.modelPickerContainer}>
-          <TouchableOpacity
-            style={styles.modelPickerButton}
-            onPress={() => setModelPickerOpen(!modelPickerOpen)}
-            testID="ask-model-picker"
-          >
-            <Text style={styles.modelPickerLabel}>Model</Text>
-            <Text style={styles.modelPickerValue} numberOfLines={1}>
-              {selectedModel || 'Select model'}
-            </Text>
-            <Text style={styles.modelPickerArrow}>{modelPickerOpen ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-
-          {modelPickerOpen && (
-            <View style={styles.modelPickerDropdown}>
-              {availableModels.map((model) => (
-                <TouchableOpacity
-                  key={model}
-                  style={[
-                    styles.modelPickerOption,
-                    model === selectedModel && styles.modelPickerOptionSelected,
-                  ]}
-                  onPress={() => {
-                    setSelectedModel(model);
-                    setModelPickerOpen(false);
-                  }}
-                  testID={`ask-model-option-${model}`}
-                >
-                  <Text style={styles.modelPickerOptionText}>{model}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
 
       <View style={styles.bar}>
         <View style={styles.barInner}>
@@ -476,53 +474,66 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  modelPickerContainer: {
+  modelHeader: {
+    zIndex: 2,
     paddingHorizontal: 16,
-    paddingTop: 6,
+    paddingTop: 10,
     paddingBottom: 2,
-    flexShrink: 0,
+    alignItems: 'flex-start',
   },
-  modelPickerButton: {
+  modelChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    maxWidth: '88%',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
     backgroundColor: colors.hairline,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
   },
-  modelPickerLabel: {
-    fontSize: 12,
-    fontFamily: fonts.medium,
-    color: colors.muted,
-  },
-  modelPickerValue: {
-    fontSize: 12,
+  modelChipText: {
+    maxWidth: 220,
+    fontSize: 13,
     fontFamily: fonts.medium,
     color: colors.body,
-    flex: 1,
   },
-  modelPickerArrow: {
-    fontSize: 9,
+  modelChipChevron: {
+    marginLeft: 7,
+    fontSize: 15,
+    lineHeight: 15,
     color: colors.muted,
   },
-  modelPickerDropdown: {
-    marginTop: 4,
+  modelDropdown: {
+    minWidth: 210,
+    marginTop: 6,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  modelOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 13,
+    paddingVertical: 10,
+  },
+  modelOptionSelected: {
     backgroundColor: colors.hairline,
-    borderRadius: 8,
-    paddingVertical: 4,
-    maxHeight: 160,
   },
-  modelPickerOption: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  modelPickerOptionSelected: {
-    backgroundColor: colors.faint + '20',
-  },
-  modelPickerOptionText: {
+  modelOptionText: {
+    flex: 1,
     fontSize: 13,
     fontFamily: fonts.regular,
     color: colors.body,
+  },
+  modelCheck: {
+    marginLeft: 10,
+    fontSize: 14,
+    fontFamily: fonts.medium,
+    color: colors.ink,
   },
 });
