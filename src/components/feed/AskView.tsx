@@ -140,7 +140,7 @@ export default function AskView({ events, timeFormat, onOpenEvent }: AskViewProp
 
     try {
       // Call the API
-      const response = await ask(q, selectedModel);
+      const response = await ask(q, undefined, selectedModel);
       setLoading(false);
       const result: AskState = {
         text: response.answer,
