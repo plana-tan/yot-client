@@ -293,9 +293,9 @@ async function authedStream(
     throw error;
   }
 
-  const timeoutMs = 120_000;
+  // Streaming requests may spend an unbounded amount of time in Hermes MCP
+  // tools before the first token. Do not impose a client-side deadline.
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
   let response: Response;
   try {
     response = await currentFetch()(`${session.baseUrl}/api${path}`, {
@@ -321,7 +321,6 @@ async function authedStream(
   }
 
   if (!response.ok) {
-    clearTimeout(timer);
     const error = errorFromBody(response.status, await readBody(response));
     if (error.status === 401) onUnauthorized?.();
     throw error;
@@ -356,7 +355,8 @@ async function authedStream(
     }
     if (buffer) consume(buffer);
   } finally {
-    clearTimeout(timer);
+    // Release the reader when the stream ends; there is intentionally no timer.
+    reader.releaseLock();
   }
 }
 
