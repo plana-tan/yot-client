@@ -634,8 +634,8 @@ export async function deleteEvent(id: string): Promise<void> {
  * proxies to Hermes API Server. The server handles all calendar context via
  * yot MCP tools.
  *
- * Timeout is generous (120s) because the backend may invoke multiple MCP
- * tools before responding.
+ * The streaming variant below has no client-side deadline because Hermes may
+ * spend an unbounded amount of time invoking MCP tools before its first token.
  */
 export async function ask(
   query: string,
