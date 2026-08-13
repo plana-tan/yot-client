@@ -303,6 +303,8 @@ describe('Tracking pane', () => {
     await act(async () => {
       fireEvent.press(utils.getByText('Tracking'));
     });
+    // The pane now shows a loader first; wait for the spec to resolve.
+    await utils.findByTestId('tracking-row-t1');
     return utils;
   }
 

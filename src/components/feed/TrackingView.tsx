@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import AppPressable from '@/components/AppPressable';
 import type { PullScrollProps } from '@/components/PullToSync';
@@ -33,15 +33,18 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
   const now = useMemo(() => new Date(), []);
   const [spec, setSpec] = useState<TrackingPluginSpec>(() => buildDefaultSpec(now));
   const [data, setData] = useState<ResolvedTrackingData>(() => resolveSpecData(buildDefaultSpec(now)));
+  const [loading, setLoading] = useState(true);
 
   // Load the plugin's spec + data; reset the franchise filter on change.
   useEffect(() => {
     let alive = true;
+    setLoading(true);
     loadPluginSpec(pluginId, now).then((s) => {
       if (alive) {
         setSpec(s);
         setData(resolveSpecData(s));
         setFranchise(null);
+        setLoading(false);
       }
     });
     return () => {
@@ -77,6 +80,16 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
       color: franchiseColor(item.franchise),
     };
   };
+
+  // Show a loader until the real spec arrives — otherwise the bundled demo
+  // tracker flashes for a frame before a custom plugin's content loads.
+  if (loading) {
+    return (
+      <View style={[styles.root, styles.loading]} testID="feed-tracking">
+        <ActivityIndicator color={colors.muted} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root} testID="feed-tracking">
@@ -163,6 +176,12 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     minHeight: 0,
+  },
+
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 48,
   },
 
   filterBar: {
