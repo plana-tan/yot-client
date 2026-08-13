@@ -16,8 +16,8 @@ export type CatalogEntry = (p: ElementProps) => React.ReactElement;
  * spec may reference. Props are FIXED and typed — no arbitrary style injection.
  */
 export const catalog: Record<string, CatalogEntry> = {
-  Row: ({ children }) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>{children}</View>
+  Row: ({ props, children }) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: (props?.gap as number) ?? 14, flex: (props?.flex as number) ?? 1 }}>{children}</View>
   ),
   Column: ({ children }) => <View style={{ flex: 1, minWidth: 0 }}>{children}</View>,
   Scroll: ({ children }) => <View>{children}</View>,
@@ -34,8 +34,11 @@ export const catalog: Record<string, CatalogEntry> = {
   ),
   ProgressBar: ({ props, color }) => {
     const pct = Math.round(Math.min(1, Math.max(0, ((props?.progress as number) ?? 0))) * 100);
+    const flex = (props?.flex as number) ?? 0;
+    const height = (props?.height as number) ?? 3;
+    const marginTop = (props?.marginTop as number) ?? 6;
     return (
-      <View style={{ width: 80, height: 3, borderRadius: 1.5, backgroundColor: colors.hairlineStrong, overflow: 'hidden', marginTop: 6 }}>
+      <View style={{ width: flex ? undefined : 80, flex, height, borderRadius: height / 2, backgroundColor: colors.hairlineStrong, overflow: 'hidden', marginTop }}>
         <View style={{ height: '100%', width: `${pct}%`, backgroundColor: (color as string) ?? colors.ink }} />
       </View>
     );
