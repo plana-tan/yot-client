@@ -70,6 +70,7 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
   const showFilter = spec.list?.filter ?? true;
   const gutter = spec.list?.gutter ?? 24;
   const rowPadding = spec.list?.rowPadding ?? 13;
+  const showGroupHeader = spec.list?.groupHeader ?? true;
 
   const rowContext = (item: TrackingItem): RenderContext => {
     const derived = describeWithSpec(item, now, spec.derive);
@@ -118,11 +119,13 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
       <ScrollView {...scrollProps} style={styles.scroll} contentContainerStyle={styles.content}>
         {groups.map((bucket) => (
           <View key={bucket.group} style={[styles.group, { paddingHorizontal: gutter }]}>
-            <View style={styles.groupHeader}>
-              <Text style={styles.groupLabel} testID={`tracking-group-${bucket.group}`}>
-                {bucket.group}
-              </Text>
-            </View>
+            {showGroupHeader ? (
+              <View style={styles.groupHeader}>
+                <Text style={styles.groupLabel} testID={`tracking-group-${bucket.group}`}>
+                  {bucket.group}
+                </Text>
+              </View>
+            ) : null}
 
             {bucket.items.map((item) => (
               <AppPressable

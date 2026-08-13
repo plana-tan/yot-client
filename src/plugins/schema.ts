@@ -100,6 +100,8 @@ export const ListChromeSchema = z.object({
   gutter: z.number().optional(),
   /** Vertical padding per row (px). Card gap = 2× this. Default 13. */
   rowPadding: z.number().optional(),
+  /** Show the time-period group headers ("This week", …). Default true. */
+  groupHeader: z.boolean().optional(),
 });
 export type ListChrome = z.infer<typeof ListChromeSchema>;
 
