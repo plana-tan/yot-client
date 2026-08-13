@@ -62,6 +62,9 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
   const franchiseColor = (name: string): string =>
     data.franchises.find((f) => f.name === name)?.color ?? colors.ink;
 
+  const showChevron = spec.list?.chevron ?? true;
+  const showHairline = spec.list?.hairline ?? true;
+
   const rowContext = (item: TrackingItem): RenderContext => {
     const derived = describeWithSpec(item, now, spec.derive);
     const rec = item as unknown as Record<string, unknown>;
@@ -111,10 +114,10 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
                 accessibilityLabel={`${item.title}, ${item.franchise}`}
                 testID={`tracking-row-${item.id}`}
                 onPress={() => onOpenItem(item.id)}
-                style={styles.row}
+                style={[styles.row, !showHairline && styles.rowNoHairline]}
               >
                 {spec.listRow ? renderTree(spec.listRow, rowContext(item)) : null}
-                <ChevronRightIcon />
+                {showChevron ? <ChevronRightIcon /> : null}
               </AppPressable>
             ))}
           </View>
@@ -219,5 +222,8 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderBottomWidth: 1,
     borderBottomColor: colors.hairline,
+  },
+  rowNoHairline: {
+    borderBottomWidth: 0,
   },
 });
