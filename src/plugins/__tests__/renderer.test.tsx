@@ -29,4 +29,22 @@ describe('renderTree', () => {
     );
     expect(getByText('Arlecchino')).toBeTruthy();
   });
+
+  it('renders a flight route (origin / destination / plane)', async () => {
+    const { getByText } = await render(
+      renderTree(
+        { type: 'Route', props: { origin: '{{item.origin}}', destination: '{{item.destination}}', progress: '{{derived.progress}}' } },
+        { item: { origin: 'HND', destination: 'SFO' }, derived: { progress: 0 }, color: '#0066B3' },
+      )!,
+    );
+    expect(getByText('HND')).toBeTruthy();
+    expect(getByText('SFO')).toBeTruthy();
+  });
+
+  it('renders a status badge', async () => {
+    const { getByText } = await render(
+      renderTree({ type: 'StatusBadge', value: 'On time' }, { item: {}, derived: {} })!,
+    );
+    expect(getByText('On time')).toBeTruthy();
+  });
 });
