@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { SvgUri, SvgXml } from 'react-native-svg';
 
 import ListRow from '@/components/ListRow';
 import SectionLabel from '@/components/SectionLabel';
@@ -26,7 +27,7 @@ export interface ElementProps {
   color?: string;
 }
 
-export type CatalogEntry = (p: ElementProps) => React.ReactElement;
+export type CatalogEntry = (p: ElementProps) => React.ReactElement | null;
 
 /**
  * The host's registry of renderable components. Keys are the `type` strings a
@@ -76,6 +77,16 @@ export const catalog: Record<string, CatalogEntry> = {
     <UIProgress value={Number(props?.value ?? 0)} color={(color as string) ?? colors.ink} />
   ),
   Separator: ({ props }) => <UISeparator color={props?.color as string | undefined} />,
+  Svg: ({ props, color }) => {
+    const width = (props?.width as number) ?? 40;
+    const height = (props?.height as number) ?? 40;
+    const uri = props?.uri as string | undefined;
+    const xml = (props?.svg as string) ?? (props?.xml as string);
+    const currentColor = (props?.color as string) ?? color;
+    if (uri) return <SvgUri uri={uri} width={width} height={height} color={currentColor} />;
+    if (xml) return <SvgXml xml={xml} width={width} height={height} color={currentColor} />;
+    return null;
+  },
 
   /* ---------------------------------------------- reused app primitives */
 

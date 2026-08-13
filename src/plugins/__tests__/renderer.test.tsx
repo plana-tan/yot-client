@@ -57,4 +57,12 @@ describe('renderTree', () => {
     );
     expect(getByText('HND → SFO')).toBeTruthy();
   });
+
+  it('renders an inline svg', async () => {
+    const svg = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/></svg>';
+    const { toJSON } = await render(
+      renderTree({ type: 'Svg', props: { svg, width: 24, height: 24 } }, { item: {}, derived: {} })!,
+    );
+    expect(toJSON()).toBeTruthy();
+  });
 });
