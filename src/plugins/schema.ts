@@ -91,10 +91,11 @@ export const ActionDefSchema = z.object({
 });
 export type ActionDef = z.infer<typeof ActionDefSchema>;
 
-/* ---- list chrome (per-row chevron / hairline) ---- */
+/* ---- list chrome (per-row chevron / hairline / filter bar) ---- */
 export const ListChromeSchema = z.object({
   chevron: z.boolean().optional(),
   hairline: z.boolean().optional(),
+  filter: z.boolean().optional(),
 });
 export type ListChrome = z.infer<typeof ListChromeSchema>;
 

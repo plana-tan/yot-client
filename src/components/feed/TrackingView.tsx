@@ -64,6 +64,7 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
 
   const showChevron = spec.list?.chevron ?? true;
   const showHairline = spec.list?.hairline ?? true;
+  const showFilter = spec.list?.filter ?? true;
 
   const rowContext = (item: TrackingItem): RenderContext => {
     const derived = describeWithSpec(item, now, spec.derive);
@@ -77,25 +78,27 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
 
   return (
     <View style={styles.root} testID="feed-tracking">
-      <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          <Pill
-            label="All"
-            selected={franchise === null}
-            onPress={() => setFranchise(null)}
-            testID="tracking-pill-All"
-          />
-          {pills.map((f) => (
+      {showFilter ? (
+        <View style={styles.filterBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
             <Pill
-              key={f.name}
-              label={f.abbr}
-              selected={franchise === f.name}
-              onPress={() => setFranchise((prev) => (prev === f.name ? null : f.name))}
-              testID={`tracking-pill-${f.abbr}`}
+              label="All"
+              selected={franchise === null}
+              onPress={() => setFranchise(null)}
+              testID="tracking-pill-All"
             />
-          ))}
-        </ScrollView>
-      </View>
+            {pills.map((f) => (
+              <Pill
+                key={f.name}
+                label={f.abbr}
+                selected={franchise === f.name}
+                onPress={() => setFranchise((prev) => (prev === f.name ? null : f.name))}
+                testID={`tracking-pill-${f.abbr}`}
+              />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
       <ScrollView {...scrollProps} style={styles.scroll} contentContainerStyle={styles.content}>
         {groups.map((bucket) => (
