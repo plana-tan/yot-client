@@ -15,7 +15,7 @@ describe('loadPluginSpec', () => {
       title: 'Server Spec',
       description: 'A server-provided spec.',
       version: 1,
-      data: { fetch: 'https://x.example/y.json' },
+      data: { franchises: [], items: [] },
     });
     const spec = await loadPluginSpec('server-spec');
     expect(spec.id).toBe('server-spec');

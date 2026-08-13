@@ -51,12 +51,9 @@ export interface ResolvedTrackingData {
 /**
  * Turn a spec's inline `data` into renderable items. Extra item fields (e.g.
  * `round`, `totalRounds`) are preserved so derive hooks like `index` can read
- * them. The `fetch` data source is not implemented yet — returns empty.
+ * them.
  */
 export function resolveSpecData(spec: TrackingPluginSpec): ResolvedTrackingData {
-  if ('fetch' in spec.data) {
-    return { franchises: [], items: [] };
-  }
   return {
     franchises: spec.data.franchises.map((f) => ({ ...f })),
     items: spec.data.items.map((raw) => {

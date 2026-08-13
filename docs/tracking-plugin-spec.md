@@ -68,9 +68,7 @@ actions   Record<string, ActionDef>  (optional)
 ### 3.1 `data`
 
 ```ts
-type DataSource =
-  | { franchises: Franchise[]; items: Item[] }   // inline
-  | { fetch: string };                           // remote (URL)
+type DataSource = { franchises: Franchise[]; items: Item[] };
 ```
 
 ```ts
@@ -341,8 +339,7 @@ loadTrackingSpec(now):
 ## 9. Validation Rules (zod)
 
 - `id` non-empty string; `version` positive int.
-- `data` is exactly one of inline (`franchises` + `items`, each item has required
-  fields) or `{ fetch: url }`.
+- `data` is inline (`franchises` + `items`; each item has required fields).
 - `derive` hooks match their mode's required params (`thresholdDays`, `field`,
   `totalField`, `target`, etc.); unknown modes fail.
 - `listRow`/`detail` are valid `ElementNode` trees (recursive); `type` must be a
@@ -358,7 +355,7 @@ loadTrackingSpec(now):
 ```
 spec (JSON)
   → zod-validate
-  → data resolve (inline | fetch)
+  → data resolve (inline)
   → per item: derive hooks → derived fields
   → listRow/detail element tree
   → renderer: interpolate {{…}}, evaluate showIf, resolve catalog component,
@@ -379,7 +376,10 @@ spec (JSON)
 
 ```json
 { "id": "gacha-schedule", "version": 1,
-  "data": { "fetch": "https://example.com/api/banners.json" } }
+  "data": {
+    "franchises": [{ "name": "Genshin Impact", "abbr": "GI", "color": "#E8453C" }],
+    "items": [{ "id": "b1", "title": "5.3 Banner", "franchise": "Genshin Impact",
+                "type": "gacha", "start": "2026-07-01", "end": "2026-07-21", "desc": "" }] } }
 ```
 
 `derive`, `layout`, `actions` omitted → defaults.
@@ -388,7 +388,7 @@ spec (JSON)
 
 ```json
 { "id": "weekly-manga", "version": 1,
-  "data": { "fetch": "https://example.com/api/manga.json" },
+  "data": { "franchises": [], "items": [] },
   "derive": {
     "group": { "mode": "category", "field": "magazine" },
     "timeLabel": { "mode": "date" } } }
@@ -398,7 +398,7 @@ spec (JSON)
 
 ```json
 { "id": "f1-2026", "version": 1,
-  "data": { "fetch": "https://example.com/api/f1.json" },
+  "data": { "franchises": [], "items": [] },
   "derive": { "progress": { "mode": "index", "currentField": "round", "totalField": "totalRounds" } },
   "listRow": {
     "type": "Row", "action": "openItem",
@@ -413,7 +413,7 @@ spec (JSON)
 
 ```json
 { "id": "deadlines", "version": 1,
-  "data": { "fetch": "https://example.com/api/tasks.json" },
+  "data": { "franchises": [], "items": [] },
   "derive": { "progress": { "mode": "ratio", "doneField": "done", "totalField": "total" } },
   "listRow": {
     "type": "Row",
@@ -433,9 +433,9 @@ spec (JSON)
 
 1. **Group bucket chrome** — custom group labels/order are deferred. A plugin can
    reclassify items but the bucket UI stays fixed for now.
-2. **`fetch` allowlist** — remote data URLs must be restricted (SSRF / arbitrary
-   network). Initial release: allowlist of hosts, or disable `fetch` and ship
-   inline + server-provided data only.
+2. **Data sourcing** — plugin data is inline only (no `fetch`). External data
+   (anime schedules, race dates, …) is ingested by an agent writing events into
+   the calendar, not by the plugin itself.
 3. **`notify` permissions** — local notifications require OS permission; the
    action must degrade gracefully when denied.
 4. **Async derive** — derive hooks are synchronous pure functions today (no async

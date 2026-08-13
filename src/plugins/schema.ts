@@ -19,10 +19,10 @@ export const ItemSchema = z.object({
 }).catchall(z.unknown());          // open extra fields (e.g. "round")
 export type PluginItem = z.infer<typeof ItemSchema>;
 
-export const DataSourceSchema = z.union([
-  z.object({ franchises: z.array(FranchiseSchema), items: z.array(ItemSchema) }),
-  z.object({ fetch: z.string().url() }),
-]);
+export const DataSourceSchema = z.object({
+  franchises: z.array(FranchiseSchema),
+  items: z.array(ItemSchema),
+});
 export type DataSource = z.infer<typeof DataSourceSchema>;
 
 /* ---- derive hooks ---- */
