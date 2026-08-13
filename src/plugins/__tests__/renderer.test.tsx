@@ -41,10 +41,20 @@ describe('renderTree', () => {
     expect(getByText('SFO')).toBeTruthy();
   });
 
-  it('renders a status badge', async () => {
+  it('renders a badge with a variant', async () => {
     const { getByText } = await render(
-      renderTree({ type: 'StatusBadge', value: 'On time' }, { item: {}, derived: {} })!,
+      renderTree({ type: 'Badge', value: 'On time', props: { variant: 'success' } }, { item: {}, derived: {} })!,
     );
     expect(getByText('On time')).toBeTruthy();
+  });
+
+  it('renders a card with a title', async () => {
+    const { getByText } = await render(
+      renderTree(
+        { type: 'Card', children: [{ type: 'CardTitle', value: 'HND → SFO' }] },
+        { item: {}, derived: {} },
+      )!,
+    );
+    expect(getByText('HND → SFO')).toBeTruthy();
   });
 });

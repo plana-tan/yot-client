@@ -1,17 +1,22 @@
 import { Text, View } from 'react-native';
 
+import ListRow from '@/components/ListRow';
+import SectionLabel from '@/components/SectionLabel';
 import { PlaneIcon } from '@/components/icons';
+import {
+  Badge as UIBadge,
+  Button as UIButton,
+  Card as UICard,
+  CardContent as UICardContent,
+  CardHeader as UICardHeader,
+  CardTitle as UICardTitle,
+  Progress as UIProgress,
+  Separator as UISeparator,
+  type BadgeVariant,
+  type ButtonSize,
+  type ButtonVariant,
+} from '@/components/ui';
 import { colors, fonts } from '@/theme/tokens';
-
-/** Status label → pill tint for flight-style plugins. */
-const STATUS_TINTS: Record<string, string> = {
-  'On time': '#2F9E63',
-  Boarding: '#2F9E63',
-  Delayed: '#E8A13A',
-  Cancelled: '#E8453C',
-  Scheduled: '#6B7280',
-  Landed: '#4361EE',
-};
 
 export interface ElementProps {
   value?: string;
@@ -26,8 +31,14 @@ export type CatalogEntry = (p: ElementProps) => React.ReactElement;
 /**
  * The host's registry of renderable components. Keys are the `type` strings a
  * spec may reference. Props are FIXED and typed — no arbitrary style injection.
+ *
+ * Composition: layout primitives (Row/Column/…), text, the shadcn-style UI kit
+ * (Card/Badge/Button/Progress/Separator), reused app primitives (ListRow/
+ * SectionLabel), and a couple of domain components (Route, ProgressBar).
  */
 export const catalog: Record<string, CatalogEntry> = {
+  /* ------------------------------------------------------------ layout */
+
   Row: ({ props, children }) => (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: (props?.gap as number) ?? 14, flex: (props?.flex as number) ?? 1 }}>{children}</View>
   ),
@@ -35,15 +46,51 @@ export const catalog: Record<string, CatalogEntry> = {
   Scroll: ({ children }) => <View>{children}</View>,
   Spacer: ({ props }) => <View style={{ height: (props?.size as number) ?? 8, flex: (props?.flex as number) ?? 0 }} />,
   Divider: () => <View style={{ height: 1, backgroundColor: colors.hairline }} />,
+
+  /* -------------------------------------------------------------- text */
+
   Title: ({ value }) => <Text style={{ fontSize: 15, fontFamily: fonts.semibold, color: colors.ink }} numberOfLines={1}>{value}</Text>,
   Subtitle: ({ value }) => <Text style={{ fontSize: 12, fontFamily: fonts.regular, color: colors.muted, marginTop: 3 }} numberOfLines={1}>{value}</Text>,
   Text: ({ value }) => <Text style={{ fontSize: 15, fontFamily: fonts.regular, color: colors.body }}>{value}</Text>,
   TimeLabel: ({ value }) => <Text style={{ fontSize: 12, fontFamily: fonts.medium, color: colors.muted }}>{value}</Text>,
-  Badge: ({ value }) => (
-    <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: colors.hairline }}>
-      <Text style={{ fontSize: 11, fontFamily: fonts.semibold, color: colors.ink }}>{value}</Text>
-    </View>
+
+  /* ------------------------------------------------------------ UI kit */
+
+  Card: ({ props, children }) => <UICard style={{ flex: (props?.flex as number) ?? 1 }}>{children}</UICard>,
+  CardHeader: ({ children }) => <UICardHeader>{children}</UICardHeader>,
+  CardTitle: ({ value }) => <UICardTitle>{value}</UICardTitle>,
+  CardContent: ({ children }) => <UICardContent>{children}</UICardContent>,
+  Badge: ({ value, props }) => (
+    <UIBadge variant={(props?.variant as BadgeVariant) ?? 'secondary'}>{value}</UIBadge>
   ),
+  Button: ({ value, props }) => (
+    <UIButton
+      variant={(props?.variant as ButtonVariant) ?? 'default'}
+      size={(props?.size as ButtonSize) ?? 'md'}
+      disabled={Boolean(props?.disabled)}
+    >
+      {value}
+    </UIButton>
+  ),
+  Progress: ({ props, color }) => (
+    <UIProgress value={Number(props?.value ?? 0)} color={(color as string) ?? colors.ink} />
+  ),
+  Separator: ({ props }) => <UISeparator color={props?.color as string | undefined} />,
+
+  /* ---------------------------------------------- reused app primitives */
+
+  ListRow: ({ props }) => (
+    <ListRow
+      title={String(props?.title ?? '')}
+      subtitle={props?.subtitle as string | undefined}
+      dotColor={props?.dotColor as string | undefined}
+      showChevron={Boolean(props?.showChevron)}
+    />
+  ),
+  SectionLabel: ({ value }) => <SectionLabel>{value ?? ''}</SectionLabel>,
+
+  /* --------------------------------------------------- domain components */
+
   ProgressBar: ({ props, color }) => {
     const pct = Math.round(Math.min(1, Math.max(0, ((props?.progress as number) ?? 0))) * 100);
     const flex = (props?.flex as number) ?? 0;
@@ -55,6 +102,7 @@ export const catalog: Record<string, CatalogEntry> = {
       </View>
     );
   },
+
   Route: ({ props, color }) => {
     const origin = String(props?.origin ?? '');
     const destination = String(props?.destination ?? '');
@@ -73,14 +121,7 @@ export const catalog: Record<string, CatalogEntry> = {
       </View>
     );
   },
-  StatusBadge: ({ value }) => {
-    const tint = STATUS_TINTS[String(value ?? '')] ?? colors.muted;
-    return (
-      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: tint }}>
-        <Text style={{ fontSize: 11, fontFamily: fonts.semibold, color: '#FFFFFF' }}>{value}</Text>
-      </View>
-    );
-  },
+
   Checkbox: ({ props }) => {
     const checked = Boolean(props?.checked);
     return (
