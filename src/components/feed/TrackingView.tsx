@@ -65,6 +65,8 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
   const showChevron = spec.list?.chevron ?? true;
   const showHairline = spec.list?.hairline ?? true;
   const showFilter = spec.list?.filter ?? true;
+  const gutter = spec.list?.gutter ?? 24;
+  const rowPadding = spec.list?.rowPadding ?? 13;
 
   const rowContext = (item: TrackingItem): RenderContext => {
     const derived = describeWithSpec(item, now, spec.derive);
@@ -102,7 +104,7 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
 
       <ScrollView {...scrollProps} style={styles.scroll} contentContainerStyle={styles.content}>
         {groups.map((bucket) => (
-          <View key={bucket.group} style={styles.group}>
+          <View key={bucket.group} style={[styles.group, { paddingHorizontal: gutter }]}>
             <View style={styles.groupHeader}>
               <Text style={styles.groupLabel} testID={`tracking-group-${bucket.group}`}>
                 {bucket.group}
@@ -117,7 +119,7 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
                 accessibilityLabel={`${item.title}, ${item.franchise}`}
                 testID={`tracking-row-${item.id}`}
                 onPress={() => onOpenItem(item.id)}
-                style={[styles.row, !showHairline && styles.rowNoHairline]}
+                style={[styles.row, { paddingVertical: rowPadding }, !showHairline && styles.rowNoHairline]}
               >
                 {spec.listRow ? renderTree(spec.listRow, rowContext(item)) : null}
                 {showChevron ? <ChevronRightIcon /> : null}
