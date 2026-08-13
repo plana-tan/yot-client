@@ -14,6 +14,7 @@ import MosaicFeed from '@/components/feed/MosaicFeed';
 import StoriesFeed from '@/components/feed/StoriesFeed';
 import TrackingView from '@/components/feed/TrackingView';
 import type { FeedLayoutProps } from '@/components/feed/shared';
+import { BUILTIN_SEGMENTS } from '@/plugins/builtins';
 import { upcoming, useEvents } from '@/store/events';
 import { usePlugins } from '@/store/plugins';
 import {
@@ -48,22 +49,30 @@ export default function FeedScreen() {
   const feedLayout = useFeedLayout();
 
   const added = usePlugins((s) => s.added);
+  const hiddenBuiltIns = usePlugins((s) => s.hiddenBuiltIns);
   const [mode, setMode] = useState<string>(FEED);
 
-  // Segments: Feed, Ask, then one per installed plugin (by id).
-  const segments = useMemo(() => [FEED, ASK, ...added.map((p) => p.id)], [added]);
+  // Segments: Feed (always), then visible built-ins, then one per plugin.
+  const segments = useMemo(() => {
+    const builtIns = BUILTIN_SEGMENTS.filter((b) => !hiddenBuiltIns.includes(b.id)).map((b) => b.id);
+    return [FEED, ...builtIns, ...added.map((p) => p.id)];
+  }, [added, hiddenBuiltIns]);
 
-  // If the active mode was a plugin that got removed, fall back to Feed.
+  // If the active mode disappears (plugin removed, built-in hidden), fall back to Feed.
   useEffect(() => {
-    if (mode !== FEED && mode !== ASK && !added.some((p) => p.id === mode)) {
+    if (!segments.includes(mode)) {
       setMode(FEED);
     }
-  }, [added, mode]);
+  }, [segments, mode]);
 
-  const labelFor = (m: string): string =>
-    m === FEED ? 'Feed' : m === ASK ? 'Ask' : (added.find((p) => p.id === m)?.title ?? m);
+  const labelFor = (m: string): string => {
+    if (m === FEED) return 'Feed';
+    const builtIn = BUILTIN_SEGMENTS.find((b) => b.id === m);
+    if (builtIn) return builtIn.title;
+    return added.find((p) => p.id === m)?.title ?? m;
+  };
 
-  const isPlugin = mode !== FEED && mode !== ASK;
+  const isPlugin = mode !== FEED && !BUILTIN_SEGMENTS.some((b) => b.id === mode);
 
   // Same day-rollover guard as the Events tab: "Today" must stop meaning
   // yesterday if the app is left open past midnight.

@@ -11,7 +11,7 @@ const TRACK = { id: 'tracking-demo', title: 'Tracking', description: 'Demo', ver
 describe('usePlugins', () => {
   beforeEach(() => {
     act(() => {
-      usePlugins.setState({ added: [] });
+      usePlugins.setState({ added: [], hiddenBuiltIns: [] });
     });
   });
 
@@ -44,5 +44,13 @@ describe('usePlugins', () => {
       usePlugins.getState().toggle(TRACK);
     });
     expect(usePlugins.getState().added).toEqual([F1, TRACK]);
+  });
+
+  it('toggles a built-in segment on then off', () => {
+    expect(usePlugins.getState().hiddenBuiltIns).toEqual([]);
+    act(() => usePlugins.getState().toggleBuiltIn('ask'));
+    expect(usePlugins.getState().hiddenBuiltIns).toEqual(['ask']);
+    act(() => usePlugins.getState().toggleBuiltIn('ask'));
+    expect(usePlugins.getState().hiddenBuiltIns).toEqual([]);
   });
 });

@@ -4,45 +4,73 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import AppPressable from '@/components/AppPressable';
 import { CheckIcon } from '@/components/icons';
+import { BUILTIN_SEGMENTS } from '@/plugins/builtins';
 import type { PluginMeta } from '@/plugins/schema';
 import { usePlugins } from '@/store/plugins';
 import { colors, fonts, springs } from '@/theme/tokens';
 
 /**
- * A list of plugins with an add/remove toggle. The "Add" button morphs into a
- * checkmark (scale + spring) when a plugin is added — the row stays in place
- * rather than disappearing. Used by Settings and onboarding.
+ * A list of toggleable feed segments: the built-ins (Ask, …) first, then the
+ * real plugins. The "Add" button morphs into a checkmark (scale + spring) when
+ * a segment is on; the row stays in place rather than disappearing. Used by
+ * Settings and onboarding.
  */
 export interface PluginPickerProps {
   plugins: PluginMeta[];
 }
 
 export default function PluginPicker({ plugins }: PluginPickerProps) {
+  const hiddenBuiltIns = usePlugins((s) => s.hiddenBuiltIns);
+  const toggleBuiltIn = usePlugins((s) => s.toggleBuiltIn);
   const added = usePlugins((s) => s.added);
   const toggle = usePlugins((s) => s.toggle);
 
-  if (plugins.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyText}>No plugins available.</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.list}>
-      {plugins.map((p) => {
-        const isAdded = added.some((a) => a.id === p.id);
-        return (
-          <View key={p.id} style={styles.row} testID={`plugin-picker-${p.id}`}>
-            <View style={styles.rowText}>
-              <Text style={styles.title}>{p.title}</Text>
-              {p.description ? <Text style={styles.desc}>{p.description}</Text> : null}
-            </View>
-            <AddButton id={p.id} added={isAdded} label={p.title} onPress={() => toggle(p)} />
-          </View>
-        );
-      })}
+      {BUILTIN_SEGMENTS.map((b) => (
+        <Row
+          key={b.id}
+          id={b.id}
+          title={b.title}
+          description={b.description}
+          added={!hiddenBuiltIns.includes(b.id)}
+          onPress={() => toggleBuiltIn(b.id)}
+        />
+      ))}
+      {plugins.map((p) => (
+        <Row
+          key={p.id}
+          id={p.id}
+          title={p.title}
+          description={p.description}
+          added={added.some((a) => a.id === p.id)}
+          onPress={() => toggle(p)}
+        />
+      ))}
+    </View>
+  );
+}
+
+function Row({
+  id,
+  title,
+  description,
+  added,
+  onPress,
+}: {
+  id: string;
+  title: string;
+  description?: string;
+  added: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <View style={styles.row} testID={`plugin-picker-${id}`}>
+      <View style={styles.rowText}>
+        <Text style={styles.title}>{title}</Text>
+        {description ? <Text style={styles.desc}>{description}</Text> : null}
+      </View>
+      <AddButton id={id} added={added} label={title} onPress={onPress} />
     </View>
   );
 }
@@ -130,14 +158,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: fonts.semibold,
     color: colors.canvas,
-  },
-  empty: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-  },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: fonts.regular,
-    color: colors.muted,
   },
 });
