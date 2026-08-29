@@ -141,7 +141,7 @@ export default function FeedScreen() {
           {(scrollProps) => (
             <TrackingView
               pluginId={mode}
-              onOpenItem={(id) => router.push(`/tracking/${id}`)}
+              onOpenItem={(id) => router.push(`/tracking/${id}?plugin=${mode}`)}
               scrollProps={scrollProps}
             />
           )}

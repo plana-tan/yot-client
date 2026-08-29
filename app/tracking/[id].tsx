@@ -1,17 +1,23 @@
 import { differenceInCalendarDays, startOfDay } from 'date-fns';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AppPressable from '@/components/AppPressable';
 import { BackChevronIcon } from '@/components/icons';
+import { describeWithSpec } from '@/plugins/derive';
+import { buildDefaultSpec } from '@/plugins/defaultSpec';
+import { loadPluginSpec, resolveSpecData } from '@/plugins/loader';
+import { renderTree, type RenderContext } from '@/plugins/renderer';
+import type { TrackingPluginSpec } from '@/plugins/schema';
 import {
   describe,
   franchiseFor,
   isRange,
   itemById,
   useTracking,
+  type TrackingItem,
 } from '@/store/tracking';
 import { useTheme } from '@/theme/context';
 import { fonts, type } from '@/theme/tokens';
@@ -20,19 +26,62 @@ import type { Colors } from '@/theme/tokens';
 /**
  * Tracking detail (design lines 933-979).
  *
- * Franchise eyebrow, big title, one countdown line, and — for an active
- * multi-day range — a 4px progress bar with "Nd ago" / "Nd left" beneath it.
- * Then the description and a Type / Duration metadata block.
+ * Two data paths:
+ * - `?plugin=<id>` (feed plugin rows): the item lives in that plugin's server
+ *   spec, so the spec is fetched and the body renders the spec's `detail`
+ *   element tree — the host only supplies back chrome and scroll.
+ * - no param (demo dataset): the item comes from the tracking store and the
+ *   native detail layout renders (franchise eyebrow, countdown, progress bar).
  */
+
+interface SpecHit {
+  spec: TrackingPluginSpec;
+  item?: TrackingItem;
+}
+
 export default function TrackingDetailScreen() {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, plugin } = useLocalSearchParams<{ id: string; plugin?: string }>();
   const insets = useSafeAreaInsets();
   const now = useMemo(() => new Date(), []);
 
-  const item = useTracking((s) => (id ? itemById(s, id) : undefined));
-  const color = useTracking((s) => (item ? franchiseFor(s, item.franchise)?.color : undefined));
+  // Spec-driven path: fetch the plugin spec and find the item in it.
+  const [hit, setHit] = useState<SpecHit | null>(null);
+  const [specLoading, setSpecLoading] = useState(Boolean(plugin));
+  useEffect(() => {
+    if (!plugin || !id) {
+      setHit(null);
+      setSpecLoading(false);
+      return;
+    }
+    let alive = true;
+    setSpecLoading(true);
+    loadPluginSpec(plugin, now).then((spec) => {
+      if (!alive) return;
+      const data = resolveSpecData(spec);
+      setHit({ spec, item: data.items.find((i) => i.id === id) });
+      setSpecLoading(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [plugin, id, now]);
+
+  // Legacy path: the demo dataset lives in the tracking store.
+  const storeItem = useTracking((s) => (id ? itemById(s, id) : undefined));
+  const storeColor = useTracking((s) => {
+    const it = id ? itemById(s, id) : undefined;
+    return it ? franchiseFor(s, it.franchise)?.color : undefined;
+  });
+
+  const isSpec = Boolean(plugin);
+  const item = isSpec ? hit?.item : storeItem;
+  const color = isSpec
+    ? item
+      ? hit?.spec.data.franchises.find((f) => f.name === item.franchise)?.color
+      : undefined
+    : storeColor;
 
   const back = useCallback(() => {
     if (router.canGoBack()) router.back();
@@ -53,6 +102,14 @@ export default function TrackingDetailScreen() {
     </AppPressable>
   );
 
+  if (specLoading) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]} testID="tracking-detail">
+        <View style={styles.header}>{BackLink}</View>
+      </View>
+    );
+  }
+
   if (!item) {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]} testID="tracking-detail-missing">
@@ -60,6 +117,27 @@ export default function TrackingDetailScreen() {
         <View style={styles.missing}>
           <Text style={styles.missingTitle}>Not found</Text>
         </View>
+      </View>
+    );
+  }
+
+  // Spec-driven body: the plugin owns the whole detail layout.
+  const detailTree = hit?.spec.detail ?? (isSpec ? buildDefaultSpec(now).detail : undefined);
+  if (isSpec && detailTree) {
+    const derived = describeWithSpec(item, now, hit?.spec.derive);
+    const rec = item as unknown as Record<string, unknown>;
+    const ctx: RenderContext = {
+      item: { ...rec, start: item.start?.getTime() ?? null, end: item.end?.getTime() ?? null },
+      derived: derived as unknown as Record<string, unknown>,
+      color: color ?? colors.ink,
+      colors,
+    };
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]} testID="tracking-detail">
+        <View style={styles.header}>{BackLink}</View>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          {renderTree(detailTree, ctx)}
+        </ScrollView>
       </View>
     );
   }
