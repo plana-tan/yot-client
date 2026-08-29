@@ -7,6 +7,7 @@ import { ChevronRightIcon } from '@/components/icons';
 import { describeWithSpec, groupItemsBySpec } from '@/plugins/derive';
 import { buildDefaultSpec } from '@/plugins/defaultSpec';
 import { loadPluginSpec, resolveSpecData, type ResolvedTrackingData } from '@/plugins/loader';
+import { resolveActions } from '@/plugins/actions';
 import { renderTree, type RenderContext } from '@/plugins/renderer';
 import type { TrackingPluginSpec } from '@/plugins/schema';
 import { compareTrackingItems, type TrackingItem } from '@/store/tracking';
@@ -80,9 +81,11 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
     const derived = describeWithSpec(item, now, spec.derive);
     const rec = item as unknown as Record<string, unknown>;
     return {
-      item: { ...rec, start: item.start?.getTime() ?? null, end: item.end?.getTime() ?? null },
+      // Serialized context contract (spec §6): dates stay ISO strings.
+      item: { ...rec, start: item.start?.toISOString() ?? null, end: item.end?.toISOString() ?? null },
       derived: derived as unknown as Record<string, unknown>,
       color: franchiseColor(item.franchise),
+      actions: resolveActions(spec, item, { openItem: onOpenItem }),
       colors,
     };
   };
