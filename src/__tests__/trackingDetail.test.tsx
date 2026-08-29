@@ -2,7 +2,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import TrackingDetailScreen from '../../app/tracking/[id]';
 import { loadPluginSpec } from '@/plugins/loader';
@@ -82,6 +82,27 @@ describe('TrackingDetail — spec-driven (plugin param)', () => {
 
     const view = await render(<TrackingDetailScreen />);
     expect(await view.findByText('Seat 39A')).toBeTruthy();
+  });
+
+  it('wires spec actions into detail nodes', async () => {
+    // Spy on the resolved handlers through a spec whose action we can observe:
+    // openUrl calls Linking.openURL; instead of mocking RN, spy via callAsk →
+    // api client. Simplest observable: openItem re-routes.
+    const push = jest.requireMock('expo-router').router.push;
+    push.mockClear();
+    routerMock.useLocalSearchParams.mockReturnValue({ id: 'ev:1', plugin: 'flight-manager' });
+    loadPluginSpecMock.mockResolvedValue({
+      ...makeSpec({
+        type: 'Column',
+        children: [{ type: 'Button', value: 'Related', action: 'rel' }],
+      }),
+      actions: { rel: { kind: 'openItem' } },
+    });
+
+    const view = await render(<TrackingDetailScreen />);
+    const btn = await view.findByText('Related');
+    fireEvent.press(btn);
+    expect(push).toHaveBeenCalledWith('/tracking/ev:1?plugin=flight-manager');
   });
 
   it('shows Not found for an unknown item id', async () => {

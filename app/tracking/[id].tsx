@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AppPressable from '@/components/AppPressable';
 import { BackChevronIcon } from '@/components/icons';
 import { describeWithSpec } from '@/plugins/derive';
+import { resolveActions } from '@/plugins/actions';
 import { buildDefaultSpec } from '@/plugins/defaultSpec';
 import { loadPluginSpec, resolveSpecData } from '@/plugins/loader';
 import { renderTree, type RenderContext } from '@/plugins/renderer';
@@ -122,14 +123,19 @@ export default function TrackingDetailScreen() {
   }
 
   // Spec-driven body: the plugin owns the whole detail layout.
-  const detailTree = hit?.spec.detail ?? (isSpec ? buildDefaultSpec(now).detail : undefined);
-  if (isSpec && detailTree) {
+  const spec = hit?.spec;
+  const detailTree = spec?.detail ?? (isSpec ? buildDefaultSpec(now).detail : undefined);
+  if (isSpec && detailTree && spec) {
     const derived = describeWithSpec(item, now, hit?.spec.derive);
     const rec = item as unknown as Record<string, unknown>;
     const ctx: RenderContext = {
-      item: { ...rec, start: item.start?.getTime() ?? null, end: item.end?.getTime() ?? null },
+      // Serialized context contract (spec §6): dates stay ISO strings.
+      item: { ...rec, start: item.start?.toISOString() ?? null, end: item.end?.toISOString() ?? null },
       derived: derived as unknown as Record<string, unknown>,
       color: color ?? colors.ink,
+      actions: resolveActions(spec, item, {
+        openItem: (targetId: string) => router.push(`/tracking/${targetId}?plugin=${plugin}`),
+      }),
       colors,
     };
     return (

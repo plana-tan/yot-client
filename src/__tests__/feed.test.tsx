@@ -342,6 +342,6 @@ describe('Tracking pane', () => {
     await act(async () => {
       fireEvent.press(getByTestId('tracking-row-t1'));
     });
-    expect(router.push).toHaveBeenCalledWith('/tracking/t1');
+    expect(router.push).toHaveBeenCalledWith('/tracking/t1?plugin=tracking-demo');
   });
 });
