@@ -1,6 +1,6 @@
 import { addMinutes, differenceInMinutes, format } from 'date-fns';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,6 +17,8 @@ import AppPressable from '@/components/AppPressable';
 import DateTimeField from '@/components/DateTimeField';
 import TextField from '@/components/TextField';
 import { BackChevronIcon } from '@/components/icons';
+import { getEvent } from '@/api/client';
+import { toAppEvent, type AppEvent } from '@/api/types';
 import { fmtTimeRange } from '@/lib/dates';
 import { useEvents } from '@/store/events';
 import { useEffectiveTimeZone, useTimeFormat } from '@/store/settings';
@@ -83,7 +85,28 @@ export default function EventDetailScreen() {
   const timeFormat = useTimeFormat();
   const timeZone = useEffectiveTimeZone();
 
-  const event = useEvents((s) => (id ? s.eventsById[id] : undefined));
+  const stored = useEvents((s) => (id ? s.eventsById[id] : undefined));
+  // Events outside the synced window (±horizon months) — e.g. plugin items
+  // opened from the feed — are not in the store; fetch the single record.
+  const [fetched, setFetched] = useState<AppEvent | null>(null);
+  const [fetchFailed, setFetchFailed] = useState(false);
+  useEffect(() => {
+    setFetched(null);
+    setFetchFailed(false);
+    if (!id || stored) return;
+    let alive = true;
+    getEvent(id)
+      .then((wire) => {
+        if (alive) setFetched(toAppEvent(wire));
+      })
+      .catch(() => {
+        if (alive) setFetchFailed(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [id, stored]);
+  const event = stored ?? fetched;
   const calendar = useEvents((s) => (event ? s.calendarsById[event.calendarId] : undefined));
   const editEvent = useEvents((s) => s.editEvent);
   const removeEvent = useEvents((s) => s.removeEvent);
@@ -106,7 +129,9 @@ export default function EventDetailScreen() {
         <View style={styles.missing}>
           <Text style={styles.missingTitle}>Event not found</Text>
           <Text style={styles.missingBody}>
-            It may have been deleted, or it is outside the synced range.
+            {fetchFailed
+              ? 'It may have been deleted, or it is outside the synced range.'
+              : 'Loading…'}
           </Text>
         </View>
       </View>

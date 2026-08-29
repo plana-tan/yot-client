@@ -141,7 +141,14 @@ export default function FeedScreen() {
           {(scrollProps) => (
             <TrackingView
               pluginId={mode}
-              onOpenItem={(id) => router.push(`/tracking/${id}?plugin=${mode}`)}
+              onOpenItem={(id) =>
+                // Merged items carry `ev:{uuid}` — they ARE server events, so
+                // open the standard event detail (fetch-on-miss covers the
+                // hidden ones). Everything else is a spec item.
+                id.startsWith('ev:')
+                  ? router.push(`/event/${id.slice(3)}`)
+                  : router.push(`/tracking/${id}?plugin=${mode}`)
+              }
               scrollProps={scrollProps}
             />
           )}
