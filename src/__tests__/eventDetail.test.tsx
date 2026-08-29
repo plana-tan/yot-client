@@ -28,6 +28,13 @@ jest.mock('expo-router', () => ({
 // The picker needs a native module; the screen only has to render and wire it.
 jest.mock('@react-native-community/datetimepicker', () => 'DateTimePicker');
 
+// The fetch-on-miss path (`GET /events/:id`) — spy via the API client module.
+// The `mock` prefix lets the factory reference it (jest hoisting rule).
+const mockGetEvent = jest.fn();
+jest.mock('@/api/client', () => ({
+  getEvent: (...args: unknown[]) => mockGetEvent(...args),
+}));
+
 const routerMock = jest.requireMock('expo-router') as {
   router: { back: jest.Mock; replace: jest.Mock };
   useLocalSearchParams: jest.Mock;
@@ -121,6 +128,7 @@ describe('Event detail', () => {
 
   it('falls back to a not-found state for an unknown id', async () => {
     seed(null);
+    mockGetEvent.mockRejectedValue(new Error('404'));
     routerMock.useLocalSearchParams.mockReturnValue({ id: 'nope' });
 
     const { getByText, getByTestId } = await renderScreen();
@@ -136,6 +144,47 @@ describe('Event detail', () => {
 
     await fireEvent.press(getByTestId('event-back'));
     expect(routerMock.router.back).toHaveBeenCalled();
+  });
+
+  it('fetches an event missing from the store (e.g. hidden plugin events)', async () => {
+    seed(null);
+    routerMock.useLocalSearchParams.mockReturnValue({
+      id: 'b69a1c40-c782-485f-bedb-26c9c844edad',
+    });
+    mockGetEvent.mockResolvedValue({
+      id: 'b69a1c40-c782-485f-bedb-26c9c844edad',
+      calendar_id: 'cal-1',
+      title: 'HND → LHR',
+      description: 'Passenger ARAKI/RIKA · Reservation D90ST6 · Seat 39A',
+      context: null,
+      location: null,
+      start_at: '2026-09-04T00:55:00Z',
+      end_at: '2026-09-04T15:20:00Z',
+      all_day: false,
+      image_path: null,
+      url: null,
+      source_uid: null,
+      created_at: '2026-08-29T00:00:00Z',
+      updated_at: '2026-08-29T00:00:00Z',
+      tags: [],
+      reminders: [],
+    });
+
+    const { getByTestId } = await renderScreen();
+    expect(mockGetEvent).toHaveBeenCalledWith('b69a1c40-c782-485f-bedb-26c9c844edad');
+    await waitFor(() => expect(getByTestId('event-title')).toHaveTextContent('HND → LHR'));
+  });
+
+  it('stays on the missing state when the fetch fails', async () => {
+    seed(null);
+    routerMock.useLocalSearchParams.mockReturnValue({ id: 'gone' });
+    mockGetEvent.mockRejectedValue(new Error('404'));
+
+    const { getByText } = await renderScreen();
+    await waitFor(() => expect(getByText('Event not found')).toBeTruthy());
+    await waitFor(() =>
+      expect(getByText('It may have been deleted, or it is outside the synced range.')).toBeTruthy(),
+    );
   });
 });
 
