@@ -8,18 +8,27 @@ import {
   type TrackingPluginSpec,
 } from '@/plugins/schema';
 import type { TrackingItem } from '@/store/tracking';
+import {
+  pluginSpecCacheEpoch,
+  readCachedPluginSpec,
+  writeCachedPluginSpec,
+} from '@/plugins/specCache';
 
 /**
  * Fetch the tracking spec from yot-server (`GET /api/plugins/<id>`), validate
- * it, and fall back to the bundled default on any failure (offline, bad payload,
- * unauthenticated). `now` anchors the demo data when the default is used.
+ * it, and retain the last valid response for offline use. A matching validated
+ * cache entry is preferred over the bundled demo after any request or payload
+ * failure. `now` anchors the demo data when the final fallback is used.
  */
 export async function loadPluginSpec(id: string, now: Date = new Date()): Promise<TrackingPluginSpec> {
+  const cacheEpoch = pluginSpecCacheEpoch();
   try {
     const raw = await getJSON(`/plugins/${encodeURIComponent(id)}`);
-    return TrackingPluginSpecSchema.parse(raw);
+    const spec = TrackingPluginSpecSchema.parse(raw);
+    await writeCachedPluginSpec(id, spec, cacheEpoch);
+    return spec;
   } catch {
-    return buildDefaultSpec(now);
+    return (await readCachedPluginSpec(id)) ?? buildDefaultSpec(now);
   }
 }
 
