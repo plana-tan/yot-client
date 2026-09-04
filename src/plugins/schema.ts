@@ -40,7 +40,10 @@ export const TimeLabelHookSchema = z.discriminatedUnion('mode', [
 export type TimeLabelHook = z.infer<typeof TimeLabelHookSchema>;
 
 export const ProgressHookSchema = z.discriminatedUnion('mode', [
-  z.object({ mode: z.literal('range') }),
+  z.object({
+    mode: z.literal('range'),
+    basis: z.enum(['calendar-days', 'elapsed-time']).optional(),
+  }),
   z.object({ mode: z.literal('index'), currentField: z.string(), totalField: z.string() }),
   z.object({ mode: z.literal('ratio'), doneField: z.string(), totalField: z.string() }),
   z.object({ mode: z.literal('threshold'), target: z.number(), valueField: z.string(), direction: z.enum(['down', 'up']).optional() }),

@@ -18,6 +18,8 @@ export function describeWithSpec(
   derive?: DeriveSpec,
 ): TrackingDerived {
   const base = describe(item, now);
+  const elapsedRange =
+    derive?.progress?.mode === 'range' && derive.progress.basis === 'elapsed-time';
   const customProgress =
     derive?.progress != null && derive.progress.mode !== 'range' && derive.progress.mode !== 'none';
   return {
@@ -26,7 +28,11 @@ export function describeWithSpec(
     timeLabel: applyTimeLabel(derive?.timeLabel, item, now),
     progress: applyProgress(derive?.progress, item, now),
     // index/ratio/threshold hooks always carry a bar, regardless of date range.
-    showProgress: customProgress ? true : base.showProgress,
+    showProgress: elapsedRange
+      ? item.start !== null && item.end !== null && item.end.getTime() > item.start.getTime()
+      : customProgress
+        ? true
+        : base.showProgress,
   };
 }
 

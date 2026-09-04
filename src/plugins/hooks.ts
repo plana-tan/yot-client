@@ -43,12 +43,26 @@ export function applyTimeLabel(
   return item.start.toISOString().slice(0, 10);
 }
 
+function elapsedTimeProgress(item: TrackingItem, now: Date): number {
+  if (!item.start || !item.end) return 0;
+  const span = item.end.getTime() - item.start.getTime();
+  if (span <= 0) return 0;
+  const elapsed = now.getTime() - item.start.getTime();
+  return Math.min(1, Math.max(0, elapsed / span));
+}
+
 export function applyProgress(
   hook: NonNullable<DeriveSpec['progress']> | undefined,
   item: TrackingItem,
   now: Date,
 ): number {
-  if (!hook || hook.mode === 'range' || hook.mode === 'none') return hook?.mode === 'none' ? 0 : defaultProgress(item, now);
+  if (!hook) return defaultProgress(item, now);
+  if (hook.mode === 'none') return 0;
+  if (hook.mode === 'range') {
+    return hook.basis === 'elapsed-time'
+      ? elapsedTimeProgress(item, now)
+      : defaultProgress(item, now);
+  }
   const rec = item as unknown as Record<string, unknown>;
   const num = (v: unknown) => (typeof v === 'number' ? v : Number(v) || 0);
   switch (hook.mode) {

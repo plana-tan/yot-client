@@ -151,15 +151,21 @@ Computes the 0–1 progress bar value. Modes:
 
 ```ts
 type ProgressHook =
-  | { mode: "range" }                                     // default
+  | { mode: "range"; basis?: "calendar-days" | "elapsed-time" } // default
   | { mode: "index"; currentField: string; totalField: string }
   | { mode: "ratio"; doneField: string; totalField: string }
   | { mode: "threshold"; target: number; valueField: string; direction?: "down" | "up" }
   | { mode: "none" };
 ```
 
-- `range`: fraction elapsed through an active multi-day `start`–`end` span (the
-  current demo behavior). `showProgress` = active and multi-day.
+- `range`: fraction elapsed through a `start`–`end` span. Missing `basis` or
+  `"calendar-days"` preserves the current active multi-day behavior.
+  `"elapsed-time"` uses `(now - start) / (end - start)`, clamped to 0–1, so a
+  same-day flight can move through its route in real time:
+
+  ```json
+  { "derive": { "progress": { "mode": "range", "basis": "elapsed-time" } } }
+  ```
 - `index`: `item[currentField] / item[totalField]` (e.g. F1 round/24, book
   page/pages). Always shows the bar when the fields exist.
 - `ratio`: `item[doneField] / item[totalField]` for collection/completion

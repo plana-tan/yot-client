@@ -25,6 +25,20 @@ describe('describeWithSpec', () => {
       TODAY.toISOString().slice(0, 10),
     );
   });
+
+  it('shows progress for a valid same-day elapsed-time range', () => {
+    const flight = item({
+      type: 'flight',
+      start: new Date('2026-07-28T14:00:00Z'),
+      end: new Date('2026-07-28T18:00:00Z'),
+    });
+
+    expect(
+      describeWithSpec(flight, new Date('2026-07-28T16:00:00Z'), {
+        progress: { mode: 'range', basis: 'elapsed-time' },
+      }),
+    ).toMatchObject({ progress: 0.5, showProgress: true });
+  });
 });
 
 describe('groupItemsBySpec', () => {
