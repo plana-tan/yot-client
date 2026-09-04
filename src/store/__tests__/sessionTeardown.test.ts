@@ -52,4 +52,15 @@ describe('clearLocalSessionData', () => {
     expect(useEvents.getState().eventsById).toEqual({});
     expect(useSettings.getState().onboarded).toBe(false);
   });
+
+  it('continues clearing local data when credential storage fails', async () => {
+    (clearSession as jest.Mock).mockRejectedValueOnce(new Error('keystore unavailable'));
+
+    await expect(clearLocalSessionData()).resolves.toBeUndefined();
+
+    expect(await AsyncStorage.getItem(EVENTS_CACHE_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY)).toBeNull();
+    expect(useEvents.getState().eventsById).toEqual({});
+    expect(useSettings.getState().onboarded).toBe(false);
+  });
 });

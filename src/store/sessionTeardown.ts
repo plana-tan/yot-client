@@ -5,7 +5,12 @@ import { useSettings } from '@/store/settings';
 
 /** Remove every server-scoped local trace after disconnect or authorization loss. */
 export async function clearLocalSessionData(): Promise<void> {
-  await clearSession();
-  await Promise.all([useEvents.getState().clear(), clearPluginSpecCache()]);
+  // Teardown is best-effort per store: one unavailable backend must not prevent
+  // the remaining private data from being erased or the UI from signing out.
+  await Promise.allSettled([
+    clearSession(),
+    useEvents.getState().clear(),
+    clearPluginSpecCache(),
+  ]);
   useSettings.getState().reset();
 }
