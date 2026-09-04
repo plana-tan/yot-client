@@ -31,9 +31,14 @@ jest.mock('expo-router', () => {
   const ReactModule = require('react');
   const Stack = ({ children }: { children?: React.ReactNode }) =>
     ReactModule.createElement(ReactModule.Fragment, null, children);
-  Stack.Protected = ({ children }: { children?: React.ReactNode }) =>
-    ReactModule.createElement(ReactModule.Fragment, null, children);
-  Stack.Screen = () => null;
+  function MockProtected({ children }: { children?: React.ReactNode }) {
+    return ReactModule.createElement(ReactModule.Fragment, null, children);
+  }
+  function MockScreen() {
+    return null;
+  }
+  Stack.Protected = MockProtected;
+  Stack.Screen = MockScreen;
   return {
     Stack,
     router: {
