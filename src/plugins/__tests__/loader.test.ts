@@ -120,8 +120,10 @@ describe('loadPluginSpec', () => {
     ['schema-invalid entry', JSON.stringify({ version: 1, specs: { x: { id: 42 } } })],
     ['wrong internal id', JSON.stringify({ version: 1, specs: { x: makeSpec('other') } })],
   ])('ignores %s in the cache', async (_label, raw) => {
+    (getJSON as jest.Mock).mockResolvedValueOnce(makeSpec('x'));
+    await loadPluginSpec('x');
     await AsyncStorage.setItem(PLUGIN_SPEC_CACHE_KEY, raw);
-    (getJSON as jest.Mock).mockRejectedValue(new TypeError('Network request failed'));
+    (getJSON as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'));
 
     await expect(loadPluginSpec('x', new Date('2026-07-28T15:30:00Z'))).resolves.toMatchObject({
       id: 'tracking-demo',
@@ -195,6 +197,19 @@ describe('loadPluginSpec', () => {
       version: 1,
       specs: {},
     });
+  });
+
+  it('blocks stale reads when both cache overwrite and removal fail', async () => {
+    const cached = makeSpec('flight-manager');
+    (getJSON as jest.Mock).mockResolvedValueOnce(cached);
+    await loadPluginSpec('flight-manager');
+    (AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('read-only storage'));
+    (AsyncStorage.removeItem as jest.Mock).mockRejectedValueOnce(new Error('read-only storage'));
+
+    await expect(clearPluginSpecCache()).rejects.toThrow('read-only storage');
+
+    expect(await readCachedPluginSpec('flight-manager')).toBeNull();
+    expect(await AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY)).toContain('flight-manager');
   });
 
   it('rejects a structurally valid response for the wrong plugin id and uses the matching cache', async () => {

@@ -10,6 +10,7 @@ interface PluginSpecCacheSnapshot {
 
 let epoch = 0;
 let cacheWrite: Promise<void> = Promise.resolve();
+let cacheReadable = true;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -33,12 +34,13 @@ export function pluginSpecCacheEpoch(): number {
 
 export async function readCachedPluginSpec(id: string): Promise<TrackingPluginSpec | null> {
   const readEpoch = epoch;
+  if (!cacheReadable) return null;
   await cacheWrite;
-  if (readEpoch !== epoch) return null;
+  if (readEpoch !== epoch || !cacheReadable) return null;
   const snapshot = await readSnapshot();
-  if (readEpoch !== epoch) return null;
+  if (readEpoch !== epoch || !cacheReadable) return null;
   const parsed = TrackingPluginSpecSchema.safeParse(snapshot?.specs[id]);
-  if (readEpoch !== epoch || !parsed.success || parsed.data.id !== id) return null;
+  if (readEpoch !== epoch || !cacheReadable || !parsed.success || parsed.data.id !== id) return null;
   return parsed.data;
 }
 
@@ -57,6 +59,7 @@ export function writeCachedPluginSpec(
         specs: { ...(previous?.specs ?? {}), [id]: spec },
       };
       await persistStorage.setItem(PLUGIN_SPEC_CACHE_KEY, JSON.stringify(snapshot));
+      if (expectedEpoch === epoch) cacheReadable = true;
     })
     .catch(() => {
       // A full or unavailable store must not hide a valid network response.
@@ -66,6 +69,9 @@ export function writeCachedPluginSpec(
 
 export function clearPluginSpecCache(): Promise<void> {
   epoch += 1;
+  // Block reads immediately. A successful post-clear network write re-enables
+  // them; failed physical deletion must never make the old payload eligible.
+  cacheReadable = false;
   const empty: PluginSpecCacheSnapshot = { version: 1, specs: {} };
   const operation = cacheWrite.then(async () => {
     let overwritten = false;
