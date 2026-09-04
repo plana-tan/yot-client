@@ -7,6 +7,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { EVENTS_CACHE_KEY, useEvents } from '@/store/events';
+import { PLUGIN_SPEC_CACHE_KEY } from '@/plugins/specCache';
 import { defaultSettings, useSettings } from '@/store/settings';
 import SettingsScreen from '../../app/settings';
 
@@ -181,6 +182,14 @@ describe('local cache row', () => {
     const screen = await renderScreen();
     await waitFor(() => expect(screen.getByTestId('settings-cache-size')).toHaveTextContent('0 B'));
   });
+
+  it('includes event and plugin snapshots in the displayed cache size', async () => {
+    await AsyncStorage.setItem(EVENTS_CACHE_KEY, '1234');
+    await AsyncStorage.setItem(PLUGIN_SPEC_CACHE_KEY, '123456');
+    const screen = await renderScreen();
+
+    await waitFor(() => expect(screen.getByTestId('settings-cache-size')).toHaveTextContent('10 B'));
+  });
 });
 
 describe('disconnect', () => {
@@ -198,6 +207,7 @@ describe('disconnect', () => {
 
   it('revokes the key, clears session + cache + settings, and lands on onboarding', async () => {
     await AsyncStorage.setItem(EVENTS_CACHE_KEY, '{"version":1,"events":[]}');
+    await AsyncStorage.setItem(PLUGIN_SPEC_CACHE_KEY, '{"version":1,"specs":{"flight-manager":{}}}');
     useSettings.setState({ onboarded: true, feedLayout: 'stories', timeFormat: '24h' });
     const screen = await renderScreen();
 
@@ -210,6 +220,7 @@ describe('disconnect', () => {
     expect(logout).toHaveBeenCalledTimes(1);
     expect(clearSession).toHaveBeenCalledTimes(1);
     expect(await AsyncStorage.getItem(EVENTS_CACHE_KEY)).toBeNull();
+    expect(await AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY)).toBeNull();
     expect(useEvents.getState().eventsById).toEqual({});
 
     const settings = useSettings.getState();

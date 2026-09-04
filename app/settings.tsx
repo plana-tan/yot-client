@@ -22,7 +22,6 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { logout } from '@/api/client';
-import { clearSession } from '@/api/session';
 import AppPressable from '@/components/AppPressable';
 import SectionLabel from '@/components/SectionLabel';
 import SegmentedControl from '@/components/SegmentedControl';
@@ -30,9 +29,11 @@ import Toggle from '@/components/Toggle';
 import { BackChevronIcon, CheckIcon, ChevronRightIcon } from '@/components/icons';
 import PluginPicker from '@/components/feed/PluginPicker';
 import { listPlugins } from '@/plugins/loader';
+import { PLUGIN_SPEC_CACHE_KEY } from '@/plugins/specCache';
 import type { PluginMeta } from '@/plugins/schema';
 import { formatByteSize, utf8ByteLength } from '@/lib/bytes';
 import { EVENTS_CACHE_KEY, useEvents } from '@/store/events';
+import { clearLocalSessionData } from '@/store/sessionTeardown';
 import {
   DEFAULT_VIEWS,
   FEED_LAYOUTS,
@@ -421,8 +422,15 @@ export default function SettingsScreen() {
   useEffect(() => {
     void (async () => {
       try {
-        const raw = await AsyncStorage.getItem(EVENTS_CACHE_KEY);
-        if (mounted.current) setCacheSize(formatByteSize(raw ? utf8ByteLength(raw) : 0));
+        const [eventsRaw, pluginsRaw] = await Promise.all([
+          AsyncStorage.getItem(EVENTS_CACHE_KEY),
+          AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY),
+        ]);
+        const bytes = [eventsRaw, pluginsRaw].reduce(
+          (total, raw) => total + (raw ? utf8ByteLength(raw) : 0),
+          0,
+        );
+        if (mounted.current) setCacheSize(formatByteSize(bytes));
       } catch {
         if (mounted.current) setCacheSize('—');
       }
@@ -453,10 +461,8 @@ export default function SettingsScreen() {
     } catch {
       // Ignored on purpose; the local teardown below still runs.
     }
-    await clearSession();
-    await useEvents.getState().clear();
-    // Clears `onboarded`, which is half of the root layout's stack guard.
-    useSettings.getState().reset();
+    await clearLocalSessionData();
+    // The shared teardown clears `onboarded`, half of the root stack guard.
     router.replace('/onboarding');
   }, []);
 

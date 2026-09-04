@@ -16,9 +16,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { setUnauthorizedHandler } from '@/api/client';
-import { clearSession, loadSession } from '@/api/session';
+import { loadSession } from '@/api/session';
 import { useLiveSync } from '@/hooks/useLiveSync';
 import { useEvents } from '@/store/events';
+import { clearLocalSessionData } from '@/store/sessionTeardown';
 import { type DefaultView, useSettings } from '@/store/settings';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { useTheme } from '@/theme/context';
@@ -91,12 +92,10 @@ function Root() {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       void (async () => {
-        await clearSession();
-        await useEvents.getState().clear();
-        // `reset()` clears `onboarded`, which flips the guard below. The
+        await clearLocalSessionData();
+        // Teardown clears `onboarded`, which flips the guard below. The
         // explicit replace covers the case where the 401 arrived while a
         // pushed screen (a detail page) was on top of the stack.
-        useSettings.getState().reset();
         setHasSession(false);
         router.replace('/onboarding');
       })();
@@ -136,9 +135,7 @@ function Root() {
     // The stream's 401 path is the same trapdoor as the REST client's.
     onUnauthorized: () => {
       void (async () => {
-        await clearSession();
-        await useEvents.getState().clear();
-        useSettings.getState().reset();
+        await clearLocalSessionData();
         setHasSession(false);
         router.replace('/onboarding');
       })();
