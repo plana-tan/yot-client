@@ -2,7 +2,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-import { render } from '@testing-library/react-native';
+import { act, render } from '@testing-library/react-native';
 
 import TrackingView from '@/components/feed/TrackingView';
 import { loadPluginSpec } from '@/plugins/loader';
@@ -51,6 +51,10 @@ beforeEach(() => {
   loadPluginSpecMock.mockReset();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('TrackingView list chrome — groupHeader', () => {
   it('hides the group headers when list.groupHeader is false', async () => {
     loadPluginSpecMock.mockResolvedValue(makeSpec({ groupHeader: false }));
@@ -77,5 +81,42 @@ describe('TrackingView list chrome — groupHeader', () => {
 
     expect(await findByTestId('tracking-group-TBA')).toBeTruthy();
     expect(getByTestId('tracking-row-a1')).toBeTruthy();
+  });
+});
+
+describe('TrackingView live derived values', () => {
+  it('refreshes elapsed-time progress every minute without refetching the spec', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-04T11:00:00Z'));
+
+    loadPluginSpecMock.mockResolvedValue({
+      ...makeSpec({ groupHeader: false }),
+      derive: { progress: { mode: 'range', basis: 'elapsed-time' } },
+      data: {
+        franchises: [FRANCHISE],
+        items: [
+          {
+            id: 'flight-1',
+            title: 'HND → LHR',
+            desc: 'flight',
+            franchise: 'ANA',
+            type: 'flight',
+            start: '2026-09-04T10:00:00Z',
+            end: '2026-09-04T14:00:00Z',
+          },
+        ],
+      },
+      listRow: { type: 'Text', value: '{{derived.progress}}' },
+    });
+
+    const view = await render(<TrackingView pluginId="flight-manager" onOpenItem={() => {}} />);
+    expect(await view.findByText('0.25')).toBeTruthy();
+
+    await act(async () => {
+      jest.advanceTimersByTime(60_000);
+    });
+
+    expect(view.getByText(String(61 / 240))).toBeTruthy();
+    expect(loadPluginSpecMock).toHaveBeenCalledTimes(1);
   });
 });

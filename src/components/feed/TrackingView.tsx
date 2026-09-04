@@ -35,16 +35,27 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [franchise, setFranchise] = useState<string | null>(null);
 
-  const now = useMemo(() => new Date(), []);
+  const [now, setNow] = useState(() => new Date());
   const [spec, setSpec] = useState<TrackingPluginSpec>(() => buildDefaultSpec(now));
   const [data, setData] = useState<ResolvedTrackingData>(() => resolveSpecData(buildDefaultSpec(now)));
   const [loading, setLoading] = useState(true);
 
-  // Load the plugin's spec + data; reset the franchise filter on change.
+  // Derived values such as elapsed flight progress must keep moving while the
+  // pane stays mounted. One-minute precision is enough for route progress and
+  // avoids a per-second render loop.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Load the plugin's spec + data; reset the franchise filter on change. The
+  // ticking render clock is deliberately not a dependency: progress updates
+  // must never turn into one network request per minute.
   useEffect(() => {
     let alive = true;
+    const loadedAt = new Date();
     setLoading(true);
-    loadPluginSpec(pluginId, now).then((s) => {
+    loadPluginSpec(pluginId, loadedAt).then((s) => {
       if (alive) {
         setSpec(s);
         setData(resolveSpecData(s));
@@ -55,7 +66,7 @@ export default function TrackingView({ pluginId, onOpenItem, scrollProps }: Trac
     return () => {
       alive = false;
     };
-  }, [pluginId, now]);
+  }, [pluginId]);
 
   const pills = useMemo(
     () => data.franchises.filter((f) => data.items.some((i) => i.franchise === f.name)),
