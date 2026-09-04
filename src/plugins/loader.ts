@@ -25,6 +25,7 @@ export async function loadPluginSpec(id: string, now: Date = new Date()): Promis
   try {
     const raw = await getJSON(`/plugins/${encodeURIComponent(id)}`);
     const spec = TrackingPluginSpecSchema.parse(raw);
+    if (spec.id !== id) throw new Error(`Plugin spec id mismatch: expected ${id}, got ${spec.id}`);
     await writeCachedPluginSpec(id, spec, cacheEpoch);
     return spec;
   } catch {

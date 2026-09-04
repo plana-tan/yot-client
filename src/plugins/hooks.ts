@@ -45,9 +45,13 @@ export function applyTimeLabel(
 
 function elapsedTimeProgress(item: TrackingItem, now: Date): number {
   if (!item.start || !item.end) return 0;
-  const span = item.end.getTime() - item.start.getTime();
+  const start = item.start.getTime();
+  const end = item.end.getTime();
+  const current = now.getTime();
+  if (![start, end, current].every(Number.isFinite)) return 0;
+  const span = end - start;
   if (span <= 0) return 0;
-  const elapsed = now.getTime() - item.start.getTime();
+  const elapsed = current - start;
   return Math.min(1, Math.max(0, elapsed / span));
 }
 

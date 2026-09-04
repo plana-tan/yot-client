@@ -11,6 +11,7 @@ import { listPlugins, loadPluginSpec, resolveSpecData } from '@/plugins/loader';
 import {
   PLUGIN_SPEC_CACHE_KEY,
   clearPluginSpecCache,
+  readCachedPluginSpec,
   whenPluginSpecCacheSettled,
 } from '@/plugins/specCache';
 import type { TrackingPluginSpec } from '@/plugins/schema';
@@ -150,6 +151,61 @@ describe('loadPluginSpec', () => {
     await whenPluginSpecCacheSettled();
 
     expect(await AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY)).toBeNull();
+  });
+
+  it('invalidates a cached read when clear starts while storage is being read', async () => {
+    const cached = makeSpec('flight-manager', 7, 'Cached Flights');
+    (getJSON as jest.Mock).mockResolvedValueOnce(cached);
+    await loadPluginSpec('flight-manager');
+    const staleRaw = await AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY);
+
+    let releaseRead!: (value: string | null) => void;
+    let markReadStarted!: () => void;
+    const readStarted = new Promise<void>((resolve) => {
+      markReadStarted = resolve;
+    });
+    (AsyncStorage.getItem as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise<string | null>((resolve) => {
+          releaseRead = resolve;
+          markReadStarted();
+        }),
+    );
+    (getJSON as jest.Mock).mockRejectedValueOnce(new TypeError('Network request failed'));
+
+    const pendingLoad = loadPluginSpec('flight-manager', new Date('2026-07-28T15:30:00Z'));
+    await readStarted;
+    const clearing = clearPluginSpecCache();
+    releaseRead(staleRaw);
+
+    await clearing;
+    await expect(pendingLoad).resolves.toMatchObject({ id: 'tracking-demo' });
+  });
+
+  it('overwrites sensitive data before removal so a remove failure leaves no readable spec', async () => {
+    const cached = makeSpec('flight-manager');
+    (getJSON as jest.Mock).mockResolvedValueOnce(cached);
+    await loadPluginSpec('flight-manager');
+    (AsyncStorage.removeItem as jest.Mock).mockRejectedValueOnce(new Error('remove failed'));
+
+    await expect(clearPluginSpecCache()).resolves.toBeUndefined();
+
+    expect(await readCachedPluginSpec('flight-manager')).toBeNull();
+    expect(JSON.parse(String(await AsyncStorage.getItem(PLUGIN_SPEC_CACHE_KEY)))).toEqual({
+      version: 1,
+      specs: {},
+    });
+  });
+
+  it('rejects a structurally valid response for the wrong plugin id and uses the matching cache', async () => {
+    const cached = makeSpec('flight-manager', 7, 'Cached Flights');
+    (getJSON as jest.Mock)
+      .mockResolvedValueOnce(cached)
+      .mockResolvedValueOnce(makeSpec('other-plugin', 9, 'Wrong Plugin'));
+
+    await loadPluginSpec('flight-manager');
+
+    await expect(loadPluginSpec('flight-manager')).resolves.toEqual(cached);
   });
 });
 

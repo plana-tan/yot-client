@@ -4,6 +4,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 import { addDays, startOfDay } from 'date-fns';
 import { applyGroup, applyProgress, applyTimeLabel } from '@/plugins/hooks';
+import { ProgressHookSchema } from '@/plugins/schema';
 import { group, progress, timeLabel, type TrackingItem } from '@/store/tracking';
 
 const NOW = new Date('2026-07-28T15:30:00');
@@ -52,6 +53,23 @@ describe('derive hooks', () => {
 
     expect(applyProgress(hook, item({ start, end: start }), start)).toBe(0);
     expect(applyProgress(hook, item({ start: end, end: start }), start)).toBe(0);
+  });
+
+  it('elapsed-time range progress rejects invalid dates instead of returning NaN', () => {
+    const valid = new Date('2026-09-04T14:00:00Z');
+    const invalid = new Date('not-a-date');
+    const hook = { mode: 'range', basis: 'elapsed-time' } as const;
+
+    expect(applyProgress(hook, item({ start: invalid, end: valid }), valid)).toBe(0);
+    expect(applyProgress(hook, item({ start: valid, end: invalid }), valid)).toBe(0);
+  });
+
+  it.each([
+    { mode: 'range' },
+    { mode: 'range', basis: 'calendar-days' },
+    { mode: 'range', basis: 'elapsed-time' },
+  ])('parses the backward-compatible range hook %j', (hook) => {
+    expect(ProgressHookSchema.safeParse(hook).success).toBe(true);
   });
 
   it('plain range mode keeps calendar-day behavior', () => {

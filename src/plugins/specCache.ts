@@ -32,10 +32,13 @@ export function pluginSpecCacheEpoch(): number {
 }
 
 export async function readCachedPluginSpec(id: string): Promise<TrackingPluginSpec | null> {
+  const readEpoch = epoch;
   await cacheWrite;
+  if (readEpoch !== epoch) return null;
   const snapshot = await readSnapshot();
+  if (readEpoch !== epoch) return null;
   const parsed = TrackingPluginSpecSchema.safeParse(snapshot?.specs[id]);
-  if (!parsed.success || parsed.data.id !== id) return null;
+  if (readEpoch !== epoch || !parsed.success || parsed.data.id !== id) return null;
   return parsed.data;
 }
 
@@ -63,12 +66,28 @@ export function writeCachedPluginSpec(
 
 export function clearPluginSpecCache(): Promise<void> {
   epoch += 1;
-  cacheWrite = cacheWrite
-    .then(() => persistStorage.removeItem(PLUGIN_SPEC_CACHE_KEY))
-    .catch(() => {
-      // Session teardown continues even if local storage is unavailable.
-    });
-  return cacheWrite;
+  const empty: PluginSpecCacheSnapshot = { version: 1, specs: {} };
+  const operation = cacheWrite.then(async () => {
+    let overwritten = false;
+    try {
+      await persistStorage.setItem(PLUGIN_SPEC_CACHE_KEY, JSON.stringify(empty));
+      overwritten = true;
+    } catch {
+      // Removal below may still succeed.
+    }
+
+    try {
+      await persistStorage.removeItem(PLUGIN_SPEC_CACHE_KEY);
+    } catch (error) {
+      // A successful overwrite has already erased the private payload. If both
+      // operations failed, report that to the teardown coordinator.
+      if (!overwritten) throw error;
+    }
+  });
+  cacheWrite = operation.catch(() => {
+    // Keep the serialization chain usable after a failed storage operation.
+  });
+  return operation;
 }
 
 export function whenPluginSpecCacheSettled(): Promise<void> {

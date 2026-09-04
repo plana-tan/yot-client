@@ -90,8 +90,9 @@ interface Item {
 }
 ```
 
-- `start`/`end` are **whole calendar days**; time-of-day is ignored (matches the
-  current design's day arithmetic).
+- `start`/`end` accept ISO-8601 dates or timestamps. Default range derivation
+  compares whole calendar days to preserve the original design. A range with
+  `basis: "elapsed-time"` honors the full timestamps instead.
 - The open `extra` fields are readable from `layout` via `{{item.<field>}}` and
   from derive hooks that name a `field`. They enable plugins like the F1 example
   (a `round` field) without schema changes.
